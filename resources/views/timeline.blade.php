@@ -466,12 +466,21 @@
         // Create individual event element
         function createEventElement(event) {
             const div = document.createElement('div');
-            div.className = 'group relative bg-white rounded-xl shadow-md p-6 ml-12 md:ml-16 mb-8 border-l-4 border-roman-gold';
+            div.className = 'group relative bg-white rounded-xl shadow-md p-6 ml-12 md:ml-16 mb-8 border-l-4 border-roman-gold cursor-pointer';
             
             const eraName = event.era ? event.era.name : 'ไม่ระบุยุคสมัย';
-            const year = event.start_year < 0 ? `${Math.abs(event.start_year)} BC` : `${event.start_year} AD`;
+            const startYear = event.start_year < 0 ? `${Math.abs(event.start_year)} BC` : `${event.start_year} AD`;
+            const endYear = event.end_year ? 
+                (event.end_year < 0 ? `${Math.abs(event.end_year)} BC` : `${event.end_year} AD`) : 
+                'Ongoing';
+            const yearRange = event.end_year ? `${startYear} - ${endYear}` : startYear;
             const location = event.location || 'ไม่ระบุ';
             const keyFigures = event.key_figures || 'ไม่ระบุ';
+            
+            // Store full description for toggle functionality
+            const fullDescription = event.description;
+            const abbreviatedDescription = fullDescription.length > 150 ? fullDescription.substring(0, 150) + '...' : fullDescription;
+            let isExpanded = false;
             
             div.innerHTML = `
                 <div class="absolute -left-[45px] md:-left-[55px] top-6 w-5 h-5 bg-roman-gold border-4 border-roman-red rounded-full z-10"></div>
@@ -491,19 +500,72 @@
                 </div>
                 
                 <div class="font-bold text-roman-red text-2xl mb-1">
-                    ${year}
+                    ${yearRange}
                 </div>
                 
                 <h3 class="text-xl font-serif font-bold text-gray-800 mb-3">${event.title}</h3>
                 
-                <p class="text-gray-600 text-sm border-t pt-2 mt-2">
+                <div class="text-gray-600 text-sm border-t pt-2 mt-2">
                     📍 สถานที่: ${location} <br>
-                    👥 บุคคลสำคัญ: ${keyFigures} <br><br>
-                    ${event.description}
-                </p>
+                    👥 บุคคลสำคัญ: ${keyFigures} <br>
+                    <div class="mt-2">
+                        <span class="description-text">${abbreviatedDescription}</span>
+                        ${fullDescription.length > 150 ? `
+                            <button onclick="toggleDescription(${event.id}, this)" class="text-roman-red hover:text-red-700 font-semibold text-sm mt-1 ml-2 inline-block cursor-pointer">
+                                <span class="toggle-text">📖 Show More</span>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
             `;
             
+            // Add click event to toggle description (excluding buttons)
+            div.addEventListener('click', function(e) {
+                // Don't toggle if clicking on buttons
+                if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                    return;
+                }
+                
+                const descriptionText = div.querySelector('.description-text');
+                const toggleButton = div.querySelector('button[onclick*="toggleDescription"]');
+                const toggleText = div.querySelector('.toggle-text');
+                
+                if (fullDescription.length > 150) {
+                    isExpanded = !isExpanded;
+                    
+                    if (isExpanded) {
+                        descriptionText.textContent = fullDescription;
+                        if (toggleText) toggleText.textContent = '📖 Show Less';
+                    } else {
+                        descriptionText.textContent = abbreviatedDescription;
+                        if (toggleText) toggleText.textContent = '📖 Show More';
+                    }
+                }
+            });
+            
             return div;
+        }
+        
+        // Toggle description function for button clicks
+        function toggleDescription(eventId, button) {
+            const eventDiv = button.closest('.group');
+            const descriptionText = eventDiv.querySelector('.description-text');
+            const toggleText = button.querySelector('.toggle-text');
+            
+            // Find the event data
+            const event = allEvents.find(e => e.id === eventId);
+            if (!event) return;
+            
+            const fullDescription = event.description;
+            const abbreviatedDescription = fullDescription.length > 150 ? fullDescription.substring(0, 150) + '...' : fullDescription;
+            
+            if (descriptionText.textContent === abbreviatedDescription) {
+                descriptionText.textContent = fullDescription;
+                toggleText.textContent = '📖 Show Less';
+            } else {
+                descriptionText.textContent = abbreviatedDescription;
+                toggleText.textContent = '📖 Show More';
+            }
         }
         
         // Show error message
